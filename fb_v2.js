@@ -14,10 +14,14 @@ var util = require("util");
   await page.goto("https://www.facebook.com/events/");
 
   await page.waitFor(2000);
-  const elements = await page.$$(".uiList");
+
+  // await autoScroll(page);
+  await scrollTo(page, 100);
+
+  const ul = await page.$$(".uiList");
   const result = [];
   for (i = 0; i < 100; i++) {
-    const posts = await elements[5].$$("li");
+    const posts = await ul[5].$$("li");
     const targetedPost = posts[i];
     expandPost(page, targetedPost);
     await page.waitFor(2000);
@@ -71,3 +75,48 @@ const fetchPost = async (page, post) =>
       return {};
     }
   }, post);
+
+async function scrollTo(page, index) {
+  for (i = 0; i < index; i++) {
+    let dim = await page.evaluate(
+      async ({ i }) => {
+        const postsUl = document.querySelectorAll(".uiList")[5];
+        li = postsUl.querySelectorAll("li")[i];
+        function getOffset(el) {
+          const rect = el.getBoundingClientRect();
+          return {
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY,
+            height: rect.height,
+            width: rect.width
+          };
+        }
+        return getOffset(li);
+      },
+      { i }
+    );
+    await page.waitFor(1000);
+    await page.evaluate(height => {
+      window.scrollBy(0, height);
+    }, dim.height);
+  }
+}
+
+async function autoScroll(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve, reject) => {
+      var totalHeight = 0;
+      var distance = 100;
+      var timer = setInterval(() => {
+        var scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+}
