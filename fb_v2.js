@@ -17,7 +17,9 @@ const fetchPosts = async (browser, from, to) => {
   const result = [];
   for (let i = from; i < to; i++) {
     const posts = await ul[5].$$("li");
+    console.log(i, posts.length);
     const targetedPost = posts[i];
+    await expandPost(page, targetedPost);
     await page.waitFor(2000);
     let dim = await fetchPost(page, targetedPost);
     console.log(
@@ -78,43 +80,12 @@ const fetchPost = async (page, post) =>
   }, post);
 
 async function scrollTo(page, fromIndex, index) {
-  for (i = 0; i < index; i++) {
-    console.log("Scrolling : " + i);
-    if (i >= fromIndex) {
-      const postsContainer = await page.$$(".uiList");
-      const posts = await postsContainer[5].$$("li");
-      await expandPost(page, posts[i]);
-    }
-
-    let dim =
-      (await page.evaluate(
-        async ({ i }) => {
-          try {
-            const postsUl = document.querySelectorAll(".uiList")[5];
-            li = postsUl.querySelectorAll("li")[i];
-            function getOffset(el) {
-              const rect = el.getBoundingClientRect();
-              const { height = 10, width = 10 } = rect;
-              return {
-                x: rect.left + window.scrollX,
-                y: rect.top + window.scrollY,
-                height,
-                width
-              };
-            }
-            return getOffset(li);
-          } catch (e) {
-            console.log("Scrolling Stopped");
-          }
-        },
-        { i }
-      )) || {};
-    await page.waitFor(1000);
+  for (i = 0; i < fromIndex / 10; i++) {
     await page.evaluate(height => {
-      window.scrollBy(0, height);
-    }, dim.height);
+      window.scrollBy(0, document.body.scrollHeight);
+    });
+    await page.waitFor(2000);
   }
-  console.log("Scroll Completed");
 }
 
 const getData = async () => {
@@ -123,7 +94,7 @@ const getData = async () => {
   const browser = await puppeteer.launch({
     headless: false
   });
-  for (let j = 0; j < 40; j += inc) {
+  for (let j = 0; j < 100; j += inc) {
     try {
       const partialResult = await fetchPosts(browser, j, j + inc);
       result = [...result, ...partialResult];
