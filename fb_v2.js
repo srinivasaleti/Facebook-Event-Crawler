@@ -2,9 +2,9 @@ const puppeteer = require("puppeteer");
 var fs = require("fs");
 var util = require("util");
 
-const fetchPosts = async (browser, from, to) => {
+const fetchPosts = async (page, from, to) => {
   console.log("Crawling Post " + from + " to Post " + to);
-  const page = await browser.newPage();
+
   await page.viewport({
     width: 1920,
     height: 1080
@@ -20,7 +20,6 @@ const fetchPosts = async (browser, from, to) => {
     console.log(i, posts.length);
     const targetedPost = posts[i];
     await expandPost(page, targetedPost);
-    await page.waitFor(2000);
     let dim = await fetchPost(page, targetedPost);
     console.log(
       "============================================================================================================\n"
@@ -29,14 +28,13 @@ const fetchPosts = async (browser, from, to) => {
     console.log({ [i]: dim });
     result.push(dim);
   }
-  await page.close();
   return result;
 };
 
 const expandPost = async (page, post) => {
   let stop = false;
   while (true) {
-    await page.waitFor(200);
+    await page.waitFor(50);
     if (stop) {
       break;
     }
@@ -84,7 +82,7 @@ async function scrollTo(page, fromIndex, index) {
     await page.evaluate(height => {
       window.scrollBy(0, document.body.scrollHeight);
     });
-    await page.waitFor(2000);
+    await page.waitFor(1000);
   }
 }
 
@@ -94,14 +92,16 @@ const getData = async () => {
   const browser = await puppeteer.launch({
     headless: false
   });
+  const page = await browser.newPage();
   for (let j = 0; j < 100; j += inc) {
     try {
-      const partialResult = await fetchPosts(browser, j, j + inc);
+      const partialResult = await fetchPosts(page, j, j + inc);
       result = [...result, ...partialResult];
     } catch (e) {
       console.log(e);
     }
   }
+  await page.close();
   await browser.close();
 
   fs.writeFileSync("./temp.js", util.inspect(result), "utf-8");
